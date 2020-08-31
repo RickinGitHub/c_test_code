@@ -1,0 +1,4 @@
+---- duilite_library_load Matches (3 in 2 files) ----
+duilite.h (include) line 106 : DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_library_load(char *cfg);
+duilite_init in duilite_algo.c (src) :     int r = duilite_library_load(auth_cfg);//加载库函数，完成初始化与授权，接口阻塞，调用一次即可
+duilite_init in duilite_algo.c (src) :     printf("duilite_library_load :%d\n", r);

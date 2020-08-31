@@ -1,0 +1,24 @@
+#common makefile header
+PROJECT_DIR :=$(shell pwd)
+CC 		:= arm-linux-gcc
+
+TARGET :=algodemo
+TARGETDIR := ../output/$(TARGET)
+
+ALGOLIB := ../lib
+INCLUDE := ../include
+CFLAGS 	?= -L $(ALGOLIB) -lauth_rk3308_32 \
+        -lduilite-rk3308_32-1.25.99-268435520-20200803171241-Alpha \
+        -lduilite-rk3308_32-1.25.99-268435520-20200803171244-Alpha-unstrip \
+        -lupload_rk3308_32 \
+        -I $(INCLUDE)
+   
+OBJ     := sample.o
+$(TARGET) : $(OBJ)
+	$(CC) -o $(TARGET) $(OBJ) $(CFLAGS)
+%.o: %.c
+	$(CC) -c $< -o $@ $(CFLAGS)
+
+clean:
+	@rm -rf $(OBJ) $(TARGET) *.o
+	$(info rm -rf $(OBJ) $(TARGET))

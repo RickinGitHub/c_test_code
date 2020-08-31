@@ -1,0 +1,107 @@
+{
+	"auth":{
+		"auth_dev_addr":2
+	},
+    "productInfo": {
+        "productId": "278580339",
+        "productVersion": "1.0.0",
+        "ddsAuthType": 0,
+        "ddsAuthKey": "3a665a0a11f33836cc6dd26b93fa66f7",
+        "ddsAuthSecret": "493b64f5b3c6949e4e9c3c0baee2c18f",
+        "duiliteProfile": "duilite.key",
+        "ddsProfile": "dds.key",
+        "netInterface": "enp1s0",
+        "duiliteAuth": {
+            "prof": {
+                "enable": 1,
+                "output": "",
+                "level": 1
+            },
+            "upload": {
+                "enable": 0,
+                "logId": 221,
+                "tmpdir": ".",
+                "tmpdirMaxSize": 2048000
+            }
+        }
+	},
+	
+	"aim" : {
+		"recorder": {
+			"node": "usb_4_1",
+			"bits": 16,
+			"channels": 5,
+			"rate": 16000,
+			"period_size": 512,
+			"period_count": 16
+		},
+
+		"fesp": {
+			"res": {
+				"aecBinPath": "res/fesp/aec.bin",
+				"wakeupBinPath": "res/fesp/wakeup.bin",
+				"beamformingBinPath": "res/fesp/fesp.bin",
+				"env": "words=ni hao xiao le;thresh=0.24;major=0",
+				"rollBack": 1200
+			}
+		},
+        "vad": {
+            "resBinPath": "res/fesp/vad.bin",
+            "pauseTime": 300
+        }
+	},
+
+	"cloud_server": {
+		"aliasKey": "prod",
+		"ttsSpeaker": "zhilingf",
+		"ttsSpeed": 1.0,
+		"ttsVolume": 80
+	},
+
+	"speech_recogniztion": {
+		"enableLocalASR": true,
+		"enableCloudASR": true,
+		"enableQuickWakeup": true,
+
+		"cloud_asr": {
+			"aliasKey": "prod",
+			"ttsSpeaker": "zhilingf",
+			"ttsSpeed": 1.0,
+			"ttsVolume": 80,
+			"SaveInAudioPath": "audio/debug/cloud_asr_in/"
+		},
+		"local_asr": {
+			"gram": {
+				"resBinPath": "res/asr/gram.bin",
+				"outputPath": "res/asr/local.net.bin",
+				"ebnfFile": "res/asr/gram.xbnf"
+			},
+			"resBinPath": "res/asr/local.asr.bin",
+			"netBinPath": "res/asr/local.net.bin",
+			"env": "use_filler=1;filler_penalty_score=2.0"
+		},
+		"quickWakeup": {
+			"resBinPath": "res/quick.wakeup.bin"
+		}
+	},
+
+	"speech_synthesis": {
+		"local_tts": {
+			"frontBinPath": "res/tts/local_front_middle_v2.bin",
+			"dictPath": "res/tts/aitts_sent_dict_local.db",
+			"userDict": "res/tts/user_source_v2.bin",
+			"backBinPath": "res/tts/zhilingf_common_back_ce_local.v2.1.0.bin",
+			"params": {
+				"speed": 1.0,
+				"volume": 100
+			}
+		}
+	},
+
+	"raw_player": {
+		"node": "uac_raw",
+		"period_size": 512,
+		"period_count": 8,
+		"start_threshold": 1536
+	}
+}

@@ -1,0 +1,43 @@
+d41d8cd98f00b204e9800998ecf8427e  duilite-rk3308_32-sdk-v1.25.99/build.info
+5e765352680a5f81db97d693a43897ba  duilite-rk3308_32-sdk-v1.25.99/duilite.h
+5f7fa115b52460dfea546366cbc50115  duilite-rk3308_32-sdk-v1.25.99/libauth_rk3308_32.so
+98aa53bbf454055371a332493fbe2c2f  duilite-rk3308_32-sdk-v1.25.99/libduilite-rk3308_32-1.25.99-268435520-20200803171241-Alpha.so
+19d390c9dfc0b1007c4172dbb7054bca  duilite-rk3308_32-sdk-v1.25.99/libduilite-rk3308_32-1.25.99-268435520-20200803171244-Alpha.so
+a03ad051801115aebcd9644a7c191690  duilite-rk3308_32-sdk-v1.25.99/libupload_rk3308_32.so
+
+duilite-rk3308_32-sdk-v1.25.99/libduilite-rk3308_32-1.25.99-268435520-20200803171241-Alpha.so:
+00005bad T duilite_fespa_delete
+00005a99 T duilite_fespa_feed
+00005b69 T duilite_fespa_get
+00005779 T duilite_fespa_new
+000058a1 T duilite_fespa_register
+00005b25 T duilite_fespa_set
+00005a55 T duilite_fespa_start
+00005ae1 T duilite_fespa_stop
+00005535 T duilite_library_load
+00005685 T duilite_library_opt
+00005635 T duilite_library_release
+00005ec9 T duilite_sevc_delete
+00005e3d T duilite_sevc_feed
+00005bf1 T duilite_sevc_new
+00005d0d T duilite_sevc_register
+00005df9 T duilite_sevc_start
+00005e85 T duilite_sevc_stop
+duilite-rk3308_32-sdk-v1.25.99/libduilite-rk3308_32-1.25.99-268435520-20200803171244-Alpha.so:
+00005bad T duilite_fespa_delete
+00005a99 T duilite_fespa_feed
+00005b69 T duilite_fespa_get
+00005779 T duilite_fespa_new
+000058a1 T duilite_fespa_register
+00005b25 T duilite_fespa_set
+00005a55 T duilite_fespa_start
+00005ae1 T duilite_fespa_stop
+00005535 T duilite_library_load
+00005685 T duilite_library_opt
+00005635 T duilite_library_release
+00005ec9 T duilite_sevc_delete
+00005e3d T duilite_sevc_feed
+00005bf1 T duilite_sevc_new
+00005d0d T duilite_sevc_register
+00005df9 T duilite_sevc_start
+00005e85 T duilite_sevc_stop
