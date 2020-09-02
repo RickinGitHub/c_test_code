@@ -1,0 +1,10 @@
+---- pcm_capture_handle Matches (9 in 4 files) ----
+voice_call_answer in events.c (src) : 	pcm_capture_handle = handlec;
+voice_call_handup in events.c (src) : 	snd_pcm_drain(pcm_capture_handle);
+voice_call_handup in events.c (src) : 	snd_pcm_close(pcm_capture_handle);
+main in main.c (src) : 				pcm_capture_handle = handlec;
+main in main.c (src) : 	snd_pcm_drain(pcm_capture_handle);
+main in main.c (src) : 	snd_pcm_close(pcm_capture_handle);
+server_send in voip.c (src) : 		    rc = snd_pcm_readi(pcm_capture_handle, send_buf, frames);
+server_send in voip.c (src) : 				snd_pcm_prepare(pcm_capture_handle);
+voip.h (src) line 33 : snd_pcm_t *pcm_capture_handle, *pcm_playback_handle;
