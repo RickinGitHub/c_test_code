@@ -1,0 +1,6 @@
+---- voice_downlink Matches (5 in 3 files) ----
+dz_voip.c (src) line 39 : void *voice_downlink(void *arg);
+voice_downlink in dz_voip.c (src) : 	printf("------>voice_downlink\n");
+dz_voip.c (src) line 360 : 		pthread_create(&thread_downlink, NULL, &voice_downlink, NULL);
+dz_voip.h (src) line 20 : extern void *voice_downlink(void *arg);
+main in main.c (src) : 		pthread_create(&thread_downlink, NULL, &voice_downlink, NULL);
