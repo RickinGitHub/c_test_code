@@ -1,0 +1,38 @@
+commit c5c9e9ec6b394d92a59fa7d1d9c007b11481577b
+Author: rick <daizhanjiang@dangbei.com>
+Date:   Fri Sep 4 10:36:55 2020 +0800
+
+    [refactor][2/2]run dzvoip when system starts, upload resource
+
+diff --git a/device/rockchip/rk3308/oem/res/fesp/AEC_ch6-2-ch4_2ref_emd_20200508_v2.50.0.10.bin b/device/rockchip/rk3308/oem/res/fesp/AEC_ch6-2-ch4_2ref_emd_20200508_v2.50.0.10.bin
+new file mode 100755
+index 0000000..47cdabf
+Binary files /dev/null and b/device/rockchip/rk3308/oem/res/fesp/AEC_ch6-2-ch4_2ref_emd_20200508_v2.50.0.10.bin differ
+diff --git a/device/rockchip/rk3308/oem/res/fesp/AEC_ch8-2-ch4_2ref_emd_20200811_v2.50.0.10.bin b/device/rockchip/rk3308/oem/res/fesp/AEC_ch8-2-ch4_2ref_emd_20200811_v2.50.0.10.bin
+new file mode 100755
+index 0000000..4d9d540
+Binary files /dev/null and b/device/rockchip/rk3308/oem/res/fesp/AEC_ch8-2-ch4_2ref_emd_20200811_v2.50.0.10.bin differ
+diff --git a/device/rockchip/rk3308/oem/res/fesp/UCA_asr_ch4-2-ch4_70mm_20200616_v2.0.0.40_wkpMTModeOff.bin b/device/rockchip/rk3308/oem/res/fesp/UCA_asr_ch4-2-ch4_70mm_20200616_v2.0.0.40_wkpMTModeOff.bin
+new file mode 100755
+index 0000000..5230fbe
+Binary files /dev/null and b/device/rockchip/rk3308/oem/res/fesp/UCA_asr_ch4-2-ch4_70mm_20200616_v2.0.0.40_wkpMTModeOff.bin differ
+diff --git a/device/rockchip/rk3308/oem/res/fesp/sspe_uca70mm_4chgsc_ref7_nr_agc_20200811.bin b/device/rockchip/rk3308/oem/res/fesp/sspe_uca70mm_4chgsc_ref7_nr_agc_20200811.bin
+new file mode 100755
+index 0000000..1895fcb
+Binary files /dev/null and b/device/rockchip/rk3308/oem/res/fesp/sspe_uca70mm_4chgsc_ref7_nr_agc_20200811.bin differ
+diff --git a/device/rockchip/rk3308/oem/res/fesp/sspe_uca70mm_4chgsc_ref8_nr_agc_20200811.bin b/device/rockchip/rk3308/oem/res/fesp/sspe_uca70mm_4chgsc_ref8_nr_agc_20200811.bin
+new file mode 100755
+index 0000000..52a2f51
+Binary files /dev/null and b/device/rockchip/rk3308/oem/res/fesp/sspe_uca70mm_4chgsc_ref8_nr_agc_20200811.bin differ
+diff --git a/device/rockchip/rk3308/oem/res/fesp/vad_aihome_v0.12c.bin b/device/rockchip/rk3308/oem/res/fesp/vad_aihome_v0.12c.bin
+new file mode 100755
+index 0000000..df464fa
+Binary files /dev/null and b/device/rockchip/rk3308/oem/res/fesp/vad_aihome_v0.12c.bin differ
+diff --git a/device/rockchip/rk3308/oem/res/fesp/wakeup_aifar_comm_20180104.bin b/device/rockchip/rk3308/oem/res/fesp/wakeup_aifar_comm_20180104.bin
+new file mode 100755
+index 0000000..758cf9c
+Binary files /dev/null and b/device/rockchip/rk3308/oem/res/fesp/wakeup_aifar_comm_20180104.bin differ
+diff --git a/device/rockchip/rk3308/oem/volume b/device/rockchip/rk3308/oem/volume
+new file mode 100755
+index 0000000..3f277dc
+Binary files /dev/null and b/device/rockchip/rk3308/oem/volume differ

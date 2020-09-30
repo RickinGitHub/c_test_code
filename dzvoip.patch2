@@ -1,0 +1,238 @@
+commit 29691758d32cb61add281532df8292128ccfd02b
+Author: rick <daizhanjiang@dangbei.com>
+Date:   Fri Sep 4 10:32:32 2020 +0800
+
+    [refactor]run dzvoip when system starts, delete useless files
+
+diff --git a/buildroot/board/rockchip/rk3308/fs-overlay/etc/asound.conf b/buildroot/board/rockchip/rk3308/fs-overlay/etc/asound.conf
+index e4be33e..b1e9941 100755
+--- a/buildroot/board/rockchip/rk3308/fs-overlay/etc/asound.conf
++++ b/buildroot/board/rockchip/rk3308/fs-overlay/etc/asound.conf
+@@ -6,12 +6,12 @@ pcm.!default
+         type plug
+         slave.pcm "softvol"
+     }
+-#    capture.pcm {
+-#       type plug
+-#       slave {
+-#           pcm "hw:0,0"
+-#       }
+-#   }
++    capture.pcm {
++       type plug
++       slave {
++           pcm "hw:0,0"
++       }
++   }
+ }
+ 
+ pcm.softvol {
+diff --git a/buildroot/board/rockchip/rk3308/fs-overlay/etc/init.d/S98_lunch_init b/buildroot/board/rockchip/rk3308/fs-overlay/etc/init.d/S98_lunch_init
+index 160f31b..c7793ed 100755
+--- a/buildroot/board/rockchip/rk3308/fs-overlay/etc/init.d/S98_lunch_init
++++ b/buildroot/board/rockchip/rk3308/fs-overlay/etc/init.d/S98_lunch_init
+@@ -4,12 +4,16 @@ case "$1" in
+   start)
+         aplay /usr/lib/silence.wav
+         source /oem/RkLunch.sh
+-		#recovery test
+-		if [ -e "/oem/rockchip_test/auto_reboot.sh" ]; then
+-			mkdir /data/cfg/rockchip_test
+-			cp /oem/rockchip_test/auto_reboot.sh /data/cfg/rockchip_test
+-		fi
+-        source /data/cfg/rockchip_test/auto_reboot.sh &
++        printf "start......\n"
++        #lunch dangzhi voip
++        #if [ ! -e "res" ]; then
++        #  echo "res isn't existent!!!"
++        #else
++          cp -rf /oem/res /data
++          dzvoip & 
++          source /oem/volume &
++          printf "dzvoip is running......"
++        #fi
+         ;;
+   stop)
+         printf "stop finished\n"
+diff --git a/device/rockchip/rk3308/oem/RkLunch.sh b/device/rockchip/rk3308/oem/RkLunch.sh
+index 581fd04..a2330a1 100755
+--- a/device/rockchip/rk3308/oem/RkLunch.sh
++++ b/device/rockchip/rk3308/oem/RkLunch.sh
+@@ -1,2 +1,13 @@
+ wpa_supplicant -B -i wlan0 -c /data/cfg/wpa_supplicant.conf
+ #./wakeWordAgent -e gpio &
++echo "------->RkLunch.sh"
++#default volume
++tinymix set 79 90
++tinymix set 0  3
++tinymix set 1  3
++tinymix set 2  3
++tinymix set 3  3
++tinymix set 4  3
++tinymix set 5  3
++tinymix set 6  3
++tinymix set 7  3
+diff --git a/device/rockchip/rk3308/oem/dz_voice/lib/build.info b/device/rockchip/rk3308/oem/dz_voice/lib/build.info
+deleted file mode 100755
+index 44ea658..0000000
+--- a/device/rockchip/rk3308/oem/dz_voice/lib/build.info
++++ /dev/null
+@@ -1,43 +0,0 @@
+-d41d8cd98f00b204e9800998ecf8427e  duilite-rk3308_32-sdk-v1.25.99/build.info
+-5e765352680a5f81db97d693a43897ba  duilite-rk3308_32-sdk-v1.25.99/duilite.h
+-5f7fa115b52460dfea546366cbc50115  duilite-rk3308_32-sdk-v1.25.99/libauth_rk3308_32.so
+-98aa53bbf454055371a332493fbe2c2f  duilite-rk3308_32-sdk-v1.25.99/libduilite-rk3308_32-1.25.99-268435520-20200803171241-Alpha.so
+-19d390c9dfc0b1007c4172dbb7054bca  duilite-rk3308_32-sdk-v1.25.99/libduilite-rk3308_32-1.25.99-268435520-20200803171244-Alpha.so
+-a03ad051801115aebcd9644a7c191690  duilite-rk3308_32-sdk-v1.25.99/libupload_rk3308_32.so
+-
+-duilite-rk3308_32-sdk-v1.25.99/libduilite-rk3308_32-1.25.99-268435520-20200803171241-Alpha.so:
+-00005bad T duilite_fespa_delete
+-00005a99 T duilite_fespa_feed
+-00005b69 T duilite_fespa_get
+-00005779 T duilite_fespa_new
+-000058a1 T duilite_fespa_register
+-00005b25 T duilite_fespa_set
+-00005a55 T duilite_fespa_start
+-00005ae1 T duilite_fespa_stop
+-00005535 T duilite_library_load
+-00005685 T duilite_library_opt
+-00005635 T duilite_library_release
+-00005ec9 T duilite_sevc_delete
+-00005e3d T duilite_sevc_feed
+-00005bf1 T duilite_sevc_new
+-00005d0d T duilite_sevc_register
+-00005df9 T duilite_sevc_start
+-00005e85 T duilite_sevc_stop
+-duilite-rk3308_32-sdk-v1.25.99/libduilite-rk3308_32-1.25.99-268435520-20200803171244-Alpha.so:
+-00005bad T duilite_fespa_delete
+-00005a99 T duilite_fespa_feed
+-00005b69 T duilite_fespa_get
+-00005779 T duilite_fespa_new
+-000058a1 T duilite_fespa_register
+-00005b25 T duilite_fespa_set
+-00005a55 T duilite_fespa_start
+-00005ae1 T duilite_fespa_stop
+-00005535 T duilite_library_load
+-00005685 T duilite_library_opt
+-00005635 T duilite_library_release
+-00005ec9 T duilite_sevc_delete
+-00005e3d T duilite_sevc_feed
+-00005bf1 T duilite_sevc_new
+-00005d0d T duilite_sevc_register
+-00005df9 T duilite_sevc_start
+-00005e85 T duilite_sevc_stop
+diff --git a/device/rockchip/rk3308/oem/dz_voice/lib/libauth_rk3308_32.so b/device/rockchip/rk3308/oem/dz_voice/lib/libauth_rk3308_32.so
+deleted file mode 100755
+index 6a00d90..0000000
+Binary files a/device/rockchip/rk3308/oem/dz_voice/lib/libauth_rk3308_32.so and /dev/null differ
+diff --git a/device/rockchip/rk3308/oem/dz_voice/lib/libduilite-rk3308_32-1.25.99-268435520-20200803171241-Alpha.so b/device/rockchip/rk3308/oem/dz_voice/lib/libduilite-rk3308_32-1.25.99-268435520-20200803171241-Alpha.so
+deleted file mode 100755
+index b92e7d0..0000000
+Binary files a/device/rockchip/rk3308/oem/dz_voice/lib/libduilite-rk3308_32-1.25.99-268435520-20200803171241-Alpha.so and /dev/null differ
+diff --git a/device/rockchip/rk3308/oem/dz_voice/lib/libduilite-rk3308_32-1.25.99-268435520-20200803171244-Alpha-unstrip.so b/device/rockchip/rk3308/oem/dz_voice/lib/libduilite-rk3308_32-1.25.99-268435520-20200803171244-Alpha-unstrip.so
+deleted file mode 100755
+index f8cdc7c..0000000
+Binary files a/device/rockchip/rk3308/oem/dz_voice/lib/libduilite-rk3308_32-1.25.99-268435520-20200803171244-Alpha-unstrip.so and /dev/null differ
+diff --git a/device/rockchip/rk3308/oem/dz_voice/lib/libupload_rk3308_32.so b/device/rockchip/rk3308/oem/dz_voice/lib/libupload_rk3308_32.so
+deleted file mode 100755
+index b21545d..0000000
+Binary files a/device/rockchip/rk3308/oem/dz_voice/lib/libupload_rk3308_32.so and /dev/null differ
+diff --git a/device/rockchip/rk3308/oem/dz_voice/res/fesp/AEC_ch6-2-ch4_2ref_emd_20200508_v2.50.0.10.bin b/device/rockchip/rk3308/oem/dz_voice/res/fesp/AEC_ch6-2-ch4_2ref_emd_20200508_v2.50.0.10.bin
+deleted file mode 100755
+index 47cdabf..0000000
+Binary files a/device/rockchip/rk3308/oem/dz_voice/res/fesp/AEC_ch6-2-ch4_2ref_emd_20200508_v2.50.0.10.bin and /dev/null differ
+diff --git a/device/rockchip/rk3308/oem/dz_voice/res/fesp/AEC_ch8-2-ch4_2ref_emd_20200811_v2.50.0.10.bin b/device/rockchip/rk3308/oem/dz_voice/res/fesp/AEC_ch8-2-ch4_2ref_emd_20200811_v2.50.0.10.bin
+deleted file mode 100755
+index 4d9d540..0000000
+Binary files a/device/rockchip/rk3308/oem/dz_voice/res/fesp/AEC_ch8-2-ch4_2ref_emd_20200811_v2.50.0.10.bin and /dev/null differ
+diff --git a/device/rockchip/rk3308/oem/dz_voice/res/fesp/UCA_asr_ch4-2-ch4_70mm_20200616_v2.0.0.40_wkpMTModeOff.bin b/device/rockchip/rk3308/oem/dz_voice/res/fesp/UCA_asr_ch4-2-ch4_70mm_20200616_v2.0.0.40_wkpMTModeOff.bin
+deleted file mode 100755
+index 5230fbe..0000000
+Binary files a/device/rockchip/rk3308/oem/dz_voice/res/fesp/UCA_asr_ch4-2-ch4_70mm_20200616_v2.0.0.40_wkpMTModeOff.bin and /dev/null differ
+diff --git a/device/rockchip/rk3308/oem/dz_voice/res/fesp/sspe_uca70mm_4chgsc_ref7_nr_agc_20200811.bin b/device/rockchip/rk3308/oem/dz_voice/res/fesp/sspe_uca70mm_4chgsc_ref7_nr_agc_20200811.bin
+deleted file mode 100755
+index 1895fcb..0000000
+Binary files a/device/rockchip/rk3308/oem/dz_voice/res/fesp/sspe_uca70mm_4chgsc_ref7_nr_agc_20200811.bin and /dev/null differ
+diff --git a/device/rockchip/rk3308/oem/dz_voice/res/fesp/sspe_uca70mm_4chgsc_ref8_nr_agc_20200811.bin b/device/rockchip/rk3308/oem/dz_voice/res/fesp/sspe_uca70mm_4chgsc_ref8_nr_agc_20200811.bin
+deleted file mode 100755
+index 52a2f51..0000000
+Binary files a/device/rockchip/rk3308/oem/dz_voice/res/fesp/sspe_uca70mm_4chgsc_ref8_nr_agc_20200811.bin and /dev/null differ
+diff --git a/device/rockchip/rk3308/oem/dz_voice/res/fesp/vad_aihome_v0.12c.bin b/device/rockchip/rk3308/oem/dz_voice/res/fesp/vad_aihome_v0.12c.bin
+deleted file mode 100755
+index df464fa..0000000
+Binary files a/device/rockchip/rk3308/oem/dz_voice/res/fesp/vad_aihome_v0.12c.bin and /dev/null differ
+diff --git a/device/rockchip/rk3308/oem/dz_voice/res/fesp/wakeup_aifar_comm_20180104.bin b/device/rockchip/rk3308/oem/dz_voice/res/fesp/wakeup_aifar_comm_20180104.bin
+deleted file mode 100755
+index 758cf9c..0000000
+Binary files a/device/rockchip/rk3308/oem/dz_voice/res/fesp/wakeup_aifar_comm_20180104.bin and /dev/null differ
+diff --git a/external/dzvoip/Makefile b/external/dzvoip/Makefile
+index be50445..ff02cce 100755
+--- a/external/dzvoip/Makefile
++++ b/external/dzvoip/Makefile
+@@ -3,8 +3,10 @@ PROJECT_DIR :=$(shell pwd)
+ SOURCE  := $(wildcard src/*.c)
+ OBJS    := $(patsubst %.c,%.o,$(SOURCE))
+ 
++CC      := ../$(PROJECT_DIR)/buildroot/output/rockchip_rk3308_32_debug/host/usr/bin/arm-linux-gcc
++
+ INCLUDE := $(PROJECT_DIR)/include
+-ALSALIB = /home/rick/share/local_rk3308/rk3308/buildroot/output/rockchip_rk3308_32_debug/build/alsa-lib-1.1.5
++#ALSALIB := ../$(PROJECT_DIR)/buildroot/output/rockchip_rk3308_32_debug/build/alsa-lib-1.1.5
+ ALGOLIB := $(PROJECT_DIR)/libs
+ RES     := $(PROJECT_DIR)/res
+ 
+@@ -14,7 +16,7 @@ CFLAGS 	?= -L $(ALGOLIB) -lauth_rk3308_32 \
+         -lduilite-rk3308_32-1.25.99-268435520-20200803171241-Alpha \
+         -lduilite-rk3308_32-1.25.99-268435520-20200803171244-Alpha-unstrip \
+         -lupload_rk3308_32 \
+-        -L $(ALSALIB) -lasound \
++        -lasound \
+         -lpthread -lm -ldl \
+         -I $(INCLUDE)
+ 
+@@ -25,7 +27,7 @@ $(TARGET) : $(OBJS)
+ install:
+ 	cp -f $(TARGET) $(TARGET_DIR)/usr/bin/
+ 	cp -f $(ALGOLIB)/*.so $(TARGET_DIR)/usr/lib/
+-	cp -rf $(RES)/* $(TARGET_DIR)/userdata/
++	cp -rf $(RES)/* $(TARGET_DIR)/oem/
+ 
+ everything : $(TARGET)
+ 
+diff --git a/external/dzvoip/src/dz_voip.c b/external/dzvoip/src/dz_voip.c
+index 537b09f..f88aba4 100755
+--- a/external/dzvoip/src/dz_voip.c
++++ b/external/dzvoip/src/dz_voip.c
+@@ -636,10 +636,10 @@ int duilite_init(void)
+ {
+ 	char *cfg = 
+             "{ \
+-                \"aecBinPath\":\"/oem/dz_voice/res/fesp/AEC_ch6-2-ch4_2ref_emd_20200508_v2.50.0.10.bin\",    \
+-                \"wakeupBinPath\":\"/oem/dz_voice/res/fesp/wakeup_aifar_comm_20180104.bin\", \
+-                \"beamformingBinPath\":\"/oem/dz_voice/res/fesp/UCA_asr_ch4-2-ch4_70mm_20200616_v2.0.0.40_wkpMTModeOff.bin\",    \
+-                \"env\":\"words=ni hao xiao le;thresh=0.13\",  \
++                \"aecBinPath\":\"/userdata/res/fesp/AEC_ch6-2-ch4_2ref_emd_20200508_v2.50.0.10.bin\",    \
++				\"wakeupBinPath\":\"/userdata/res/fesp/wakeup_aifar_comm_20180104.bin\", \
++				\"beamformingBinPath\":\"/userdata/res/fesp/UCA_asr_ch4-2-ch4_70mm_20200616_v2.0.0.40_wkpMTModeOff.bin\",    \
++				\"env\":\"words=ni hao xiao le;thresh=0.13\",  \
+                 \"rollBack\":1200     \
+             }";
+     int r = duilite_library_load(auth_cfg);//加载库函数，完成初始化与授权，接口阻塞，调用一次即可
+diff --git a/kernel/arch/arm/boot/dts/rk3308-voice-module-amic-mainboard-v10-aarch32-dangzhi.dts b/kernel/arch/arm/boot/dts/rk3308-voice-module-amic-mainboard-v10-aarch32-dangzhi.dts
+index 14b827c..b625668 100644
+--- a/kernel/arch/arm/boot/dts/rk3308-voice-module-amic-mainboard-v10-aarch32-dangzhi.dts
++++ b/kernel/arch/arm/boot/dts/rk3308-voice-module-amic-mainboard-v10-aarch32-dangzhi.dts
+@@ -27,3 +27,13 @@
+ &is31fl3236 {
+ 	reg = <0x3f>;
+ };
++
++&i2c2 {
++	status = "okay";
++	speech@3d {
++		#sound-dai-cells = <0>;
++		compatible = "speech,sdk";
++		reg = <0x3d>;
++	};
++};
++

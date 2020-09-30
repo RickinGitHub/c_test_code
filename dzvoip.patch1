@@ -1,0 +1,1525 @@
+commit cc66ad061c0b717d6a7d2c90c42352a8033e4ff5
+Author: rick <daizhanjiang@dangbei.com>
+Date:   Thu Sep 3 15:45:16 2020 +0800
+
+    [feature]complie dangzhi voip to system
+
+diff --git a/buildroot/configs/rockchip_rk3308_32_debug_defconfig b/buildroot/configs/rockchip_rk3308_32_debug_defconfig
+index dd9e1d9..0fa913f 100644
+--- a/buildroot/configs/rockchip_rk3308_32_debug_defconfig
++++ b/buildroot/configs/rockchip_rk3308_32_debug_defconfig
+@@ -34,6 +34,7 @@ BR2_PACKAGE_VENDOR_STORAGE=y
+ BR2_PACKAGE_ALSA_CONFIG=y
+ BR2_PACKAGE_RKSCRIPT=y
+ BR2_PACKAGE_DEVICEIO=y
++BR2_PACKAGE_DZVOIP=y
+ BR2_PACKAGE_ALSA_UTILS=y
+ BR2_PACKAGE_ALSA_UTILS_ALSACONF=y
+ BR2_PACKAGE_ALSA_UTILS_ACONNECT=y
+diff --git a/buildroot/package/rockchip/Config.in b/buildroot/package/rockchip/Config.in
+index 4d9ebf3..dec7861 100644
+--- a/buildroot/package/rockchip/Config.in
++++ b/buildroot/package/rockchip/Config.in
+@@ -179,4 +179,5 @@ source "package/rockchip/bootcontrol/Config.in"
+ source "package/rockchip/LinuxAB/Config.in"
+ source "package/rockchip/rk_webui/Config.in"
+ source "package/rockchip/rtc_demo/Config.in"
++source "package/rockchip/dzvoip/Config.in"
+ endif
+diff --git a/buildroot/package/rockchip/dzvoip/Config.in b/buildroot/package/rockchip/dzvoip/Config.in
+new file mode 100755
+index 0000000..0764036
+--- /dev/null
++++ b/buildroot/package/rockchip/dzvoip/Config.in
+@@ -0,0 +1,2 @@
++config BR2_PACKAGE_DZVOIP
++	bool "dangzhi voip applet"
+diff --git a/buildroot/package/rockchip/dzvoip/dzvoip.mk b/buildroot/package/rockchip/dzvoip/dzvoip.mk
+new file mode 100755
+index 0000000..4140dc6
+--- /dev/null
++++ b/buildroot/package/rockchip/dzvoip/dzvoip.mk
+@@ -0,0 +1,29 @@
++###################################################################
++#
++## dangzhi voice applet
++#
++##################################################################
++
++ifeq ($(BR2_PACKAGE_DZVOIP), y)
++	DZVOIP_VERSION:=1.0.0
++    DZVOIP_SITE=$(TOPDIR)/../external/dzvoip
++    DZVOIP_SITE_METHOD=local
++
++define DZVOIP_BUILD_CMDS
++    $(TARGET_MAKE_ENV) $(MAKE) CAE_PATH=libs CC=$(TARGET_CC) -C $(@D)
++     $(TARGET_MAKE_ENV) $(MAKE) CC=$(TARGET_CC)  -C $(@D)
++endef
++define DZVOIP_INSTALL_TARGET_CMDS
++    $(TARGET_MAKE_ENV) $(MAKE) CAE_PATH=libs -C $(@D) install
++endef
++
++define DZVOIP_CLEAN_CMDS
++    $(TARGET_MAKE_ENV) $(MAKE) -C $(@D) clean
++endef
++
++define DZVOIP_UNINSTALL_TARGET_CMDS
++    $(TARGET_MAKE_ENV) $(MAKE) -C $(@D) uninstall
++endef
++
++$(eval $(generic-package))
++endif
+diff --git a/external/dzvoip/Makefile b/external/dzvoip/Makefile
+new file mode 100755
+index 0000000..be50445
+--- /dev/null
++++ b/external/dzvoip/Makefile
+@@ -0,0 +1,44 @@
++#common makefile header
++PROJECT_DIR :=$(shell pwd)
++SOURCE  := $(wildcard src/*.c)
++OBJS    := $(patsubst %.c,%.o,$(SOURCE))
++
++INCLUDE := $(PROJECT_DIR)/include
++ALSALIB = /home/rick/share/local_rk3308/rk3308/buildroot/output/rockchip_rk3308_32_debug/build/alsa-lib-1.1.5
++ALGOLIB := $(PROJECT_DIR)/libs
++RES     := $(PROJECT_DIR)/res
++
++TARGET  := dzvoip
++
++CFLAGS 	?= -L $(ALGOLIB) -lauth_rk3308_32 \
++        -lduilite-rk3308_32-1.25.99-268435520-20200803171241-Alpha \
++        -lduilite-rk3308_32-1.25.99-268435520-20200803171244-Alpha-unstrip \
++        -lupload_rk3308_32 \
++        -L $(ALSALIB) -lasound \
++        -lpthread -lm -ldl \
++        -I $(INCLUDE)
++
++$(TARGET) : $(OBJS)
++	    $(CC) -o $(TARGET) $(OBJS) $(CFLAGS)
++
++.PHONY : install everything objs clean veryclean rebuild install
++install:
++	cp -f $(TARGET) $(TARGET_DIR)/usr/bin/
++	cp -f $(ALGOLIB)/*.so $(TARGET_DIR)/usr/lib/
++	cp -rf $(RES)/* $(TARGET_DIR)/userdata/
++
++everything : $(TARGET)
++
++all : $(TARGET)
++
++objs : $(OBJS)
++
++rebuild: veryclean everything
++
++clean :
++	rm -rf src/*.o
++	rm $(TARGET)
++
++veryclean : clean
++	rm -rf $(TARGET)
++
+diff --git "a/external/dzvoip/docs/DUILite SDK\345\274\200\345\217\221\346\211\213\345\206\214v1.24.pdf" "b/external/dzvoip/docs/DUILite SDK\345\274\200\345\217\221\346\211\213\345\206\214v1.24.pdf"
+new file mode 100755
+index 0000000..cc485b8
+Binary files /dev/null and "b/external/dzvoip/docs/DUILite SDK\345\274\200\345\217\221\346\211\213\345\206\214v1.24.pdf" differ
+diff --git a/external/dzvoip/docs/duilite_algo.c b/external/dzvoip/docs/duilite_algo.c
+new file mode 100755
+index 0000000..b912160
+--- /dev/null
++++ b/external/dzvoip/docs/duilite_algo.c
+@@ -0,0 +1,106 @@
++#include <stdio.h>
++#include <string.h>
++#include <stdlib.h>
++#include <assert.h>
++#include <unistd.h>
++#include <pthread.h>
++#include "duilite_algo.h"
++#include "dz_voip.h"
++
++char *auth_cfg = "{\"auth_dev_addr\": 2}";  // I2C addr
++struct duilite_fespa *fespa;
++
++/*
++ * 唤醒回调，唤醒时触发，返回json 字符串，字段释义同2.6 节语音唤醒结果：
++ *	{
++ 		"wakeupWord": "xxx",
++ 		"major": 1,
++ 		"status": 1,
++ 		"confidence": 0.465926
++ *	}
++ */
++int wakeup_callback(void *user_data, int type, char *msg, int len) 
++{
++    printf("%.*s\n", len, msg);
++    return 0;
++}
++
++/*
++ * 在唤醒回调之后，返回唤醒角度信息，为json字符串，格式如下：
++ *		{"doa": 95}
++ */
++int doa_callback(void *user_data, int type, char *msg, int len) 
++{
++    printf("%.*s\n", len, msg);
++    return 0;
++}
++
++/*
++	音频回调，实时输出经过信号处理后的音频，通常用于识别；
++	当唤醒时，会在唤醒结果与角度回调之后，返回一个json字符串：
++		{"wakeup_type": 1}
++	或
++		{"wakeup_type": 2}
++	其中1 表示，此唤醒词在env中配置major=1，需要回滚音频，在收到该json串后，回滚音频开始;返回；2表示不需要回滚。
++*/
++int beamforming_callback(void *user_data, int type, char *msg, int len) 
++{
++	//FILE* output = (FILE*)user_data;
++	
++	if (type == DUILITE_MSG_TYPE_JSON) {
++		printf("-------->,DUILITE_MSG_TYPE_JSON%.*s", len, msg);
++	} else if (type == DUILITE_MSG_TYPE_BINARY) {
++		printf("-------->DUILITE_MSG_TYPE_BINARY,%d\n", len);
++		if(len > 0) {
++			printf("-------->memcpy\n");
++			memcpy(send_buf, msg, len);
++			usleep(100);
++		    fwrite(msg, 1, len, output_bf_audio);
++		}
++	}
++    return 0;
++
++}
++
++/*
++ * 包含回声消除（echo），声源定位（doa），波束成形（beamforming）和语音唤醒（wakeup）等功能模块
++ *
++ */
++int duilite_init(FILE** output)
++{
++	char *cfg = 
++            "{ \
++                \"aecBinPath\":\"../res/fesp/AEC_ch6-2-ch4_2ref_emd_20200508_v2.50.0.10.bin\",    \
++                \"wakeupBinPath\":\"../res/fesp/wakeup_aifar_comm_20180104.bin\", \
++                \"beamformingBinPath\":\"../res/fesp/UCA_asr_ch4-2-ch4_70mm_20200616_v2.0.0.40_wkpMTModeOff.bin\",    \
++                \"env\":\"words=ni hao xiao le;thresh=0.13\",  \
++                \"rollBack\":1200     \
++            }";
++    int r = duilite_library_load(auth_cfg);//加载库函数，完成初始化与授权，接口阻塞，调用一次即可
++    printf("duilite_library_load :%d\n", r);
++    
++    fespa = duilite_fespa_new(cfg);//初始化fespa引擎，并在后台开启wakeup，echo和beamforming等计算线程
++    assert(fespa != NULL);
++
++    duilite_fespa_register(fespa, DUILITE_CALLBACK_FESPA_WAKEUP, wakeup_callback, NULL);
++
++    duilite_fespa_register(fespa, DUILITE_CALLBACK_FESPA_DOA, doa_callback, NULL);
++
++    duilite_fespa_register(fespa, DUILITE_CALLBACK_FESPA_BEAMFORMING, beamforming_callback, NULL);
++
++}
++
++void duilite_exit(void)
++{
++	duilite_fespa_delete(fespa);//销毁fespa引擎
++    duilite_library_release();//释放库资源
++}
++
++void duilite_feed(struct duilite_fespa *fespa, char *data, int len)
++{			 
++	duilite_fespa_feed(fespa, data, len);//输入音频数据,格式为16k采样率，有符号16bit编码
++	usleep(32000);
++}
++
++
++
+diff --git a/external/dzvoip/docs/duilite_algo.h b/external/dzvoip/docs/duilite_algo.h
+new file mode 100755
+index 0000000..d1c0bdb
+--- /dev/null
++++ b/external/dzvoip/docs/duilite_algo.h
+@@ -0,0 +1,24 @@
++/*************************************************************************** 
++  > File Name: duilite_algo.h
++  > Des      : none
++  > Author   : Rick
++  > Date     : 2020/08/19
++ ***************************************************************************/
++#ifndef __DUILITE_ALGO__
++#define __DUILITE_ALGO__
++
++#include "../include/duilite.h"
++
++#define ALGORITHM
++
++extern struct duilite_fespa *fespa;
++
++extern int  wakeup_callback(void *user_data, int type, char *msg, int len);
++extern int  doa_callback(void *user_data, int type, char *msg, int len);
++extern int  beamforming_callback(void *user_data, int type, char *msg, int len);
++extern int  duilite_init(FILE** output);
++extern void duilite_exit(void);
++extern void duilite_feed(struct duilite_fespa *fespa, char *data, int len);
++
++#endif
++
+diff --git a/external/dzvoip/docs/sample.c b/external/dzvoip/docs/sample.c
+new file mode 100755
+index 0000000..6e76fbb
+--- /dev/null
++++ b/external/dzvoip/docs/sample.c
+@@ -0,0 +1,95 @@
++#include <stdio.h>
++#include <string.h>
++#include <stdlib.h>
++#include <assert.h>
++#include <unistd.h>
++#include "../include/duilite.h"
++
++char *auth_cfg = "{\"auth_dev_addr\": 2}";  // I2C addr
++
++static int wakeup_callback(void *user_data, int type, char *msg, int len) {
++    printf("%.*s\n", len, msg);
++    return 0;
++}
++
++static int doa_callback(void *user_data, int type, char *msg, int len) {
++    printf("%.*s\n", len, msg);
++    return 0;
++}
++
++static int beamforming_callback(void *user_data, int type, char *msg, int len) {
++    if(type == DUILITE_MSG_TYPE_JSON) {
++        printf("%.*s\n", len, msg);
++    }
++    return 0;
++}
++
++int main(int argc, char **argv)
++{
++    char *cfg = 
++            "{ \
++                \"aecBinPath\":\"./res/fesp/AEC_ch8-2-ch4_2ref_emd_20200811_v2.50.0.10.bin\",    \
++                \"wakeupBinPath\":\"./res/fesp/wakeup_aifar_comm_20180104.bin\", \
++                \"beamformingBinPath\":\"./res/fesp/UCA_asr_ch4-2-ch4_70mm_20200616_v2.0.0.40_wkpMTModeOff.bin\",    \
++                \"env\":\"words=ni hao xiao le;thresh=0.13\",  \
++                \"rollBack\":1200     \
++            }";
++    int r = duilite_library_load(auth_cfg);//加载库函数，完成初始化与授权，接口阻塞，调用一次即可
++    printf("duilite_library_load :%d\n", r);
++    
++    struct duilite_fespa *fespa = duilite_fespa_new(cfg);//初始化fespa引擎，并在后台开启wakeup，echo和beamforming等计算线程
++    assert(fespa != NULL);
++
++    /*
++	 * 唤醒回调，唤醒时触发，返回json 字符串，字段释义同2.6 节语音唤醒结果：
++	 *	{
++			"wakeupWord": "xxx",
++			"major": 1,
++			"status": 1,
++			"confidence": 0.465926
++		}
++	 */
++    duilite_fespa_register(fespa, DUILITE_CALLBACK_FESPA_WAKEUP, wakeup_callback, NULL);
++
++	/*
++	 * 在唤醒回调之后，返回唤醒角度信息，为json字符串，格式如下：
++	 *		{"doa": 95}
++	 */
++    duilite_fespa_register(fespa, DUILITE_CALLBACK_FESPA_DOA, doa_callback, NULL);
++
++	/*
++		音频回调，实时输出经过信号处理后的音频，通常用于识别；
++		当唤醒时，会在唤醒结果与角度回调之后，返回一个json字符串：
++			{"wakeup_type": 1}
++		或
++			{"wakeup_type": 2}
++		其中1 表示，此唤醒词在env中配置major=1，需要回滚音频，在收到该json串后，回滚音频开始;返回；2表示不需要回滚。
++	*/
++    duilite_fespa_register(fespa, DUILITE_CALLBACK_FESPA_BEAMFORMING, beamforming_callback, NULL);
++	
++    FILE *audio = fopen(argv[1], "r");
++    assert(audio != NULL);
++    
++    fseek(audio, 44, SEEK_SET);
++    char buf[3200* 8];
++    int len;
++
++
++    
++    while(1)
++    {
++        len = fread(buf, 1, sizeof(buf), audio);
++        if(len == 0)
++            break;
++        
++        duilite_fespa_feed(fespa, buf, len);//输入音频数据,格式为16k采样率，有符号16bit编码
++        usleep(100000);
++    }
++    
++    fclose(audio);
++    duilite_fespa_delete(fespa);//销毁fespa引擎
++    
++    duilite_library_release();//释放库资源
++    
++    return 0;
++}
+diff --git a/external/dzvoip/include/duilite.h b/external/dzvoip/include/duilite.h
+new file mode 100755
+index 0000000..d7c51fc
+--- /dev/null
++++ b/external/dzvoip/include/duilite.h
+@@ -0,0 +1,295 @@
++#ifndef __DUILITE_H__
++#define __DUILITE_H__
++
++#ifdef __cplusplus
++extern "C" {
++#endif
++
++#ifdef NO_ANDROID
++#undef __ANDROID__
++#endif
++
++#if (!(defined DUILITE_CALL) || !(defined DUILITE_IMPORT_OR_EXPORT))
++	#if defined _WIN32
++		#if defined _WIN64
++			#define DUILITE_CALL __stdcall
++		#else
++			#define DUILITE_CALL
++		#endif
++
++		#ifdef DUILITE_IMPLEMENTION
++			#define DUILITE_IMPORT_OR_EXPORT __declspec(dllexport)
++		#else
++			#define DUILITE_IMPORT_OR_EXPORT __declspec(dllimport)
++		#endif
++	#elif defined __ANDROID__
++		#define DUILITE_CALL
++		#define DUILITE_IMPORT_OR_EXPORT
++		#undef  JNIEXPORT
++		#define JNIEXPORT __attribute ((visibility("default")))
++	#elif defined __APPLE__
++		#define DUILITE_CALL
++		#define DUILITE_IMPORT_OR_EXPORT
++	#elif defined __unix__
++		#define DUILITE_CALL
++		#define DUILITE_IMPORT_OR_EXPORT __attribute ((visibility("default")))
++	#else
++		#define DUILITE_CALL
++		#define DUILITE_IMPORT_OR_EXPORT
++	#endif
++#endif
++
++enum duilite_log_level {
++	DUILITE_LOG_LEVEL_VERBOSE = 1,
++	DUILITE_LOG_LEVEL_DEBUG,
++	DUILITE_LOG_LEVEL_INFO,
++	DUILITE_LOG_LEVEL_WARNING,
++	DUILITE_LOG_LEVEL_ERROR,
++};
++
++/* define duilite_callback begin*/
++enum duilite_msg_type {
++	DUILITE_MSG_TYPE_JSON = 0,
++	DUILITE_MSG_TYPE_BINARY,
++	DUILITE_MSG_TYPE_TLV,
++};
++
++enum duilite_callback_type {
++	DUILITE_CALLBACK_FESPA_WAKEUP = 0,
++	DUILITE_CALLBACK_FESPA_DOA,
++	DUILITE_CALLBACK_FESPA_BEAMFORMING,
++	DUILITE_CALLBACK_FESPA_VPRINTCUT,
++	DUILITE_CALLBACK_FESPL_WAKEUP,
++	DUILITE_CALLBACK_FESPL_DOA,
++	DUILITE_CALLBACK_FESPL_BEAMFORMING,
++	DUILITE_CALLBACK_FESPL_VPRINTCUT,
++	DUILITE_CALLBACK_MR_BEAMFORMING,
++	DUILITE_CALLBACK_MR_POST,
++	DUILITE_CALLBACK_MR_DOA,
++	DUILITE_CALLBACK_FESPCAR_WAKEUP,
++	DUILITE_CALLBACK_FESPCAR_BEAMFORMING,
++	DUILITE_CALLBACK_FESPCAR_DOA,
++	DUILITE_CALLBACK_FESPCAR_VPRINTCUT,
++	DUILITE_CALLBACK_FESPD_WAKEUP,
++	DUILITE_CALLBACK_FESPD_DOA,
++	DUILITE_CALLBACK_FESPD_BEAMFORMING,
++	DUILITE_CALLBACK_FESPD_VPRINTCUT,
++	DUILITE_CALLBACK_WAKEUP_VPRINTCUT,
++	DUILITE_CALLBACK_AECAGC_AECPOP,
++	DUILITE_CALLBACK_AECAGC_VOIP,
++	DUILITE_CALLBACK_FASP_DATA_CHS1,
++	DUILITE_CALLBACK_FASP_DATA_CHS2,
++	DUILITE_CALLBACK_ECHO_VOIP,
++	DUILITE_CALLBACK_SEVC_OUTPUT,
++};
++
++typedef int (*duilite_callback)(void *userdata, int type, char *msg, int len);
++/* define duilite_callback end*/
++
++
++/* define duilite_model_callback begin */
++enum duilite_model_msg_type {
++	DUILITE_MODEL_MSG_TYPE_VPSELECT = 0,
++	DUILITE_MODEL_MSG_TYPE_VPUPDATE,
++	DUILITE_MODEL_MSG_TYPE_VPINSERT,
++	DUILITE_MODEL_MSG_TYPE_VPDELETE,
++};
++
++enum duilite_model_callback_type {
++	DUILITE_MODEL_CALLBACK_VPRINT = 0,
++};
++
++typedef int (*duilite_model_callback)(void *userdata, int type, char *id, char **data, int *data_size, int *data_nmemb);
++/* define duilite_model_callback end */
++
++
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_library_load(char *cfg);
++DUILITE_IMPORT_OR_EXPORT void DUILITE_CALL duilite_library_release();
++
++enum duilite_opt_type {
++	DUILITE_OPT_VERSION_STR_GET = 0,
++	DUILITE_OPT_AUTH_CHECK,
++	DUILITE_OPT_AUTH_TRY,
++	DUILITE_OPT_UPLOAD_MODE_GET	
++};
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_library_opt(int opt, char *data, int size);
++
++
++struct duilite_vad;
++DUILITE_IMPORT_OR_EXPORT struct duilite_vad * DUILITE_CALL duilite_vad_new(char *cfg, duilite_callback callback, void *userdata);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_vad_start(struct duilite_vad *vad, char *param);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_vad_feed(struct duilite_vad *vad, char *data, int len);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_vad_stop(struct duilite_vad *vad);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_vad_cancel(struct duilite_vad *vad);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_vad_delete(struct duilite_vad *vad);
++
++struct duilite_speexenc;
++DUILITE_IMPORT_OR_EXPORT struct duilite_speexenc * DUILITE_CALL duilite_speexenc_new(char *cfg, duilite_callback callback, void *userdata);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_speexenc_start(struct duilite_speexenc *speexenc, char *param);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_speexenc_feed(struct duilite_speexenc *speexenc, char *data, int len);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_speexenc_stop(struct duilite_speexenc *speexenc);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_speexenc_delete(struct duilite_speexenc *speexenc);
++
++struct duilite_echo;
++DUILITE_IMPORT_OR_EXPORT struct duilite_echo * DUILITE_CALL duilite_echo_new(char *cfg, duilite_callback callback, void *userdata);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_echo_register(struct duilite_echo *echo, int callback_type, duilite_callback callback, void *userdata);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_echo_start(struct duilite_echo *echo, char *param);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_echo_feed(struct duilite_echo *echo, char *data, int len);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_echo_stop(struct duilite_echo *echo);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_echo_cancel(struct duilite_echo *echo);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_echo_delete(struct duilite_echo *echo);
++
++struct duilite_wakeup;
++DUILITE_IMPORT_OR_EXPORT struct duilite_wakeup * DUILITE_CALL duilite_wakeup_new(char *cfg, duilite_callback callback, void *userdata);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_wakeup_register(struct duilite_wakeup *wakeup, int callback_type, duilite_callback callback, void *userdata);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_wakeup_start(struct duilite_wakeup *wakeup, char *param);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_wakeup_feed(struct duilite_wakeup *wakeup, char *data, int len);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_wakeup_stop(struct duilite_wakeup *wakeup);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_wakeup_cancel(struct duilite_wakeup *wakeup);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_wakeup_set(struct duilite_wakeup *wakeup, char *param);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_wakeup_delete(struct duilite_wakeup *wakeup);
++
++struct duilite_cntts;
++DUILITE_IMPORT_OR_EXPORT struct duilite_cntts * DUILITE_CALL duilite_cntts_new(char *cfg, duilite_callback callback, void *userdata);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_cntts_start(struct duilite_cntts *cntts, char *param);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_cntts_feed(struct duilite_cntts *cntts, char *data);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_cntts_set(struct duilite_cntts *cntts, char *param);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_cntts_delete(struct duilite_cntts *cntts);
++
++struct duilite_gram;
++DUILITE_IMPORT_OR_EXPORT struct duilite_gram * DUILITE_CALL duilite_gram_new(char *cfg);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_gram_start(struct duilite_gram *gram, char *param);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_gram_delete(struct duilite_gram *gram);
++
++struct duilite_asr;
++DUILITE_IMPORT_OR_EXPORT struct duilite_asr * DUILITE_CALL duilite_asr_new(char *cfg, duilite_callback callback, void *userdata);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_asr_start(struct duilite_asr *asr, char *param);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_asr_feed(struct duilite_asr *asr, char *data, int len);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_asr_stop(struct duilite_asr *asr);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_asr_cancel(struct duilite_asr *asr);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_asr_delete(struct duilite_asr *asr);
++
++struct duilite_fespa;
++DUILITE_IMPORT_OR_EXPORT struct duilite_fespa * DUILITE_CALL duilite_fespa_new(char *cfg);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_fespa_register(struct duilite_fespa *fespa, int callback_type, duilite_callback callback, void *userdata);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_fespa_start(struct duilite_fespa *fespa, char *param);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_fespa_feed(struct duilite_fespa *fespa, char *data, int len);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_fespa_stop(struct duilite_fespa *fespa);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_fespa_set(struct duilite_fespa *fespa, char *param);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_fespa_get(struct duilite_fespa *fespa, char *param);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_fespa_delete(struct duilite_fespa *fespa);
++
++struct duilite_fespl;
++DUILITE_IMPORT_OR_EXPORT struct duilite_fespl * DUILITE_CALL duilite_fespl_new(char *cfg);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_fespl_register(struct duilite_fespl *fespl, int callback_type, duilite_callback callback, void *userdata);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_fespl_start(struct duilite_fespl *fespl, char *param);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_fespl_feed(struct duilite_fespl *fespl, char *data, int len);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_fespl_stop(struct duilite_fespl *fespl);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_fespl_set(struct duilite_fespl *fespl, char *param);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_fespl_get(struct duilite_fespl *fespl, char *param);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_fespl_delete(struct duilite_fespl *fespl);
++
++struct duilite_fdm;
++DUILITE_IMPORT_OR_EXPORT struct duilite_fdm * DUILITE_CALL duilite_fdm_new(char *cfg, duilite_callback callback, void *userdata);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_fdm_start(struct duilite_fdm *fdm, char *param);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_fdm_set(struct duilite_fdm *fdm, char *param);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_fdm_get(struct duilite_fdm *fdm, char *param);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_fdm_feed(struct duilite_fdm *fdm, char *data, int len);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_fdm_stop(struct duilite_fdm *fdm);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_fdm_delete(struct duilite_fdm *fdm);
++
++struct duilite_vprint;
++DUILITE_IMPORT_OR_EXPORT struct duilite_vprint * DUILITE_CALL duilite_vprint_new(char *cfg, duilite_callback callback, void *userdata);
++DUILITE_IMPORT_OR_EXPORT struct duilite_vprint * DUILITE_CALL duilite_vprint_new2(char *cfg, duilite_callback callback, duilite_model_callback model_callback, void *userdata);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_vprint_start(struct duilite_vprint *vprint, char *param);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_vprint_feed(struct duilite_vprint *vprint, char *data, int len, int type);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_vprint_stop(struct duilite_vprint *vprint);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_vprint_delete(struct duilite_vprint *vprint);
++
++struct duilite_qbye;
++DUILITE_IMPORT_OR_EXPORT struct duilite_qbye * DUILITE_CALL duilite_qbye_new(char *cfg, duilite_callback callback, void *userdata);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_qbye_start(struct duilite_qbye *qbye, char *param);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_qbye_feed(struct duilite_qbye *qbye, char *data, int len);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_qbye_stop(struct duilite_qbye *qbye);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_qbye_delete(struct duilite_qbye *qbye);
++
++struct duilite_gender;
++DUILITE_IMPORT_OR_EXPORT struct duilite_gender * DUILITE_CALL duilite_gender_new(char *cfg, duilite_callback callback, void *userdata);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_gender_start(struct duilite_gender *gender, char *param);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_gender_feed(struct duilite_gender *gender, char *data, int len);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_gender_stop(struct duilite_gender *gender);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_gender_delete(struct duilite_gender *gender);
++
++struct duilite_nwakeup;
++DUILITE_IMPORT_OR_EXPORT struct duilite_nwakeup * DUILITE_CALL duilite_nwakeup_new(char *cfg, duilite_callback callback, void *userdata);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_nwakeup_start(struct duilite_nwakeup *nwakeup, char *param);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_nwakeup_feed(struct duilite_nwakeup *nwakeup, int index, char *data, int len);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_nwakeup_stop(struct duilite_nwakeup *nwakeup);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_nwakeup_cancel(struct duilite_nwakeup *nwakeup);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_nwakeup_set(struct duilite_nwakeup *nwakeup, char *param);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_nwakeup_delete(struct duilite_nwakeup *nwakeup);
++
++struct duilite_dmasp;
++DUILITE_IMPORT_OR_EXPORT struct duilite_dmasp * DUILITE_CALL duilite_dmasp_new(char *cfg, duilite_callback callback, void *userdata);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_dmasp_start(struct duilite_dmasp *dmasp, char *param);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_dmasp_feed(struct duilite_dmasp *dmasp, char *data, int len);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_dmasp_stop(struct duilite_dmasp *dmasp);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_dmasp_cancel(struct duilite_dmasp *dmasp);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_dmasp_set(struct duilite_dmasp *dmasp, char *param);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_dmasp_delete(struct duilite_dmasp *dmasp);
++
++struct duilite_asrpp;
++DUILITE_IMPORT_OR_EXPORT struct duilite_asrpp * DUILITE_CALL duilite_asrpp_new(char *cfg, duilite_callback callback, void *userdata);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_asrpp_start(struct duilite_asrpp *asrpp, char *param);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_asrpp_feed(struct duilite_asrpp *asrpp, char *data, int len);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_asrpp_stop(struct duilite_asrpp *asrpp);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_asrpp_cancel(struct duilite_asrpp *asrpp);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_asrpp_delete(struct duilite_asrpp *asrpp);
++
++struct duilite_agc;
++DUILITE_IMPORT_OR_EXPORT struct duilite_agc * DUILITE_CALL duilite_agc_new(char *cfg, duilite_callback callback, void *userdata);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_agc_start(struct duilite_agc *agc, char *param);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_agc_feed(struct duilite_agc *agc, char *data, int len);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_agc_stop(struct duilite_agc *agc);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_agc_cancel(struct duilite_agc *agc);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_agc_delete(struct duilite_agc *agc);
++
++struct duilite_audioCut;
++DUILITE_IMPORT_OR_EXPORT struct duilite_audioCut * DUILITE_CALL duilite_audioCut_new(char *cfg, duilite_callback callback, void *userdata);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_audioCut_start(struct duilite_audioCut *audioCut, char *param);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_audioCut_feed(struct duilite_audioCut *audioCut, char *data, int len);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_audioCut_stop(struct duilite_audioCut *audioCut);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_audioCut_cancel(struct duilite_audioCut *audioCut);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_audioCut_delete(struct duilite_audioCut *audioCut);
++
++struct duilite_fespd;
++DUILITE_IMPORT_OR_EXPORT struct duilite_fespd * DUILITE_CALL duilite_fespd_new(char *cfg);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_fespd_register(struct duilite_fespd *fespd, int callback_type, duilite_callback callback, void *userdata);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_fespd_start(struct duilite_fespd *fespd, char *param);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_fespd_feed(struct duilite_fespd *fespd, char *data, int len);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_fespd_stop(struct duilite_fespd *fespd);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_fespd_set(struct duilite_fespd *fespd, char *param);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_fespd_get(struct duilite_fespd *fespd, char *param);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_fespd_delete(struct duilite_fespd *fespd);
++
++struct duilite_mds;
++DUILITE_IMPORT_OR_EXPORT struct duilite_mds * DUILITE_CALL duilite_mds_new(char *cfg, duilite_callback callback, void *userdata);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_mds_start(struct duilite_mds *mds, char *param);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_mds_feed(struct duilite_mds *mds, char *data, int len);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_mds_stop(struct duilite_mds *mds);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_mds_cancel(struct duilite_mds *mds);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_mds_delete(struct duilite_mds *mds);
++
++struct duilite_sevc;
++DUILITE_IMPORT_OR_EXPORT struct duilite_sevc * DUILITE_CALL duilite_sevc_new(char *cfg);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_sevc_register(struct duilite_sevc *sevc, int callback_type, duilite_callback callback, void *userdata);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_sevc_start(struct duilite_sevc *sevc, char *param);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_sevc_feed(struct duilite_sevc *sevc, char *data, int len);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_sevc_stop(struct duilite_sevc *sevc);
++DUILITE_IMPORT_OR_EXPORT int DUILITE_CALL duilite_sevc_delete(struct duilite_sevc *sevc);
++
++#ifdef __cplusplus
++}
++#endif
++
++#endif
+diff --git a/external/dzvoip/libs/build.info b/external/dzvoip/libs/build.info
+new file mode 100755
+index 0000000..44ea658
+--- /dev/null
++++ b/external/dzvoip/libs/build.info
+@@ -0,0 +1,43 @@
++d41d8cd98f00b204e9800998ecf8427e  duilite-rk3308_32-sdk-v1.25.99/build.info
++5e765352680a5f81db97d693a43897ba  duilite-rk3308_32-sdk-v1.25.99/duilite.h
++5f7fa115b52460dfea546366cbc50115  duilite-rk3308_32-sdk-v1.25.99/libauth_rk3308_32.so
++98aa53bbf454055371a332493fbe2c2f  duilite-rk3308_32-sdk-v1.25.99/libduilite-rk3308_32-1.25.99-268435520-20200803171241-Alpha.so
++19d390c9dfc0b1007c4172dbb7054bca  duilite-rk3308_32-sdk-v1.25.99/libduilite-rk3308_32-1.25.99-268435520-20200803171244-Alpha.so
++a03ad051801115aebcd9644a7c191690  duilite-rk3308_32-sdk-v1.25.99/libupload_rk3308_32.so
++
++duilite-rk3308_32-sdk-v1.25.99/libduilite-rk3308_32-1.25.99-268435520-20200803171241-Alpha.so:
++00005bad T duilite_fespa_delete
++00005a99 T duilite_fespa_feed
++00005b69 T duilite_fespa_get
++00005779 T duilite_fespa_new
++000058a1 T duilite_fespa_register
++00005b25 T duilite_fespa_set
++00005a55 T duilite_fespa_start
++00005ae1 T duilite_fespa_stop
++00005535 T duilite_library_load
++00005685 T duilite_library_opt
++00005635 T duilite_library_release
++00005ec9 T duilite_sevc_delete
++00005e3d T duilite_sevc_feed
++00005bf1 T duilite_sevc_new
++00005d0d T duilite_sevc_register
++00005df9 T duilite_sevc_start
++00005e85 T duilite_sevc_stop
++duilite-rk3308_32-sdk-v1.25.99/libduilite-rk3308_32-1.25.99-268435520-20200803171244-Alpha.so:
++00005bad T duilite_fespa_delete
++00005a99 T duilite_fespa_feed
++00005b69 T duilite_fespa_get
++00005779 T duilite_fespa_new
++000058a1 T duilite_fespa_register
++00005b25 T duilite_fespa_set
++00005a55 T duilite_fespa_start
++00005ae1 T duilite_fespa_stop
++00005535 T duilite_library_load
++00005685 T duilite_library_opt
++00005635 T duilite_library_release
++00005ec9 T duilite_sevc_delete
++00005e3d T duilite_sevc_feed
++00005bf1 T duilite_sevc_new
++00005d0d T duilite_sevc_register
++00005df9 T duilite_sevc_start
++00005e85 T duilite_sevc_stop
+diff --git a/external/dzvoip/libs/libauth_rk3308_32.so b/external/dzvoip/libs/libauth_rk3308_32.so
+new file mode 100755
+index 0000000..6a00d90
+Binary files /dev/null and b/external/dzvoip/libs/libauth_rk3308_32.so differ
+diff --git a/external/dzvoip/libs/libduilite-rk3308_32-1.25.99-268435520-20200803171241-Alpha.so b/external/dzvoip/libs/libduilite-rk3308_32-1.25.99-268435520-20200803171241-Alpha.so
+new file mode 100755
+index 0000000..b92e7d0
+Binary files /dev/null and b/external/dzvoip/libs/libduilite-rk3308_32-1.25.99-268435520-20200803171241-Alpha.so differ
+diff --git a/external/dzvoip/libs/libduilite-rk3308_32-1.25.99-268435520-20200803171244-Alpha-unstrip.so b/external/dzvoip/libs/libduilite-rk3308_32-1.25.99-268435520-20200803171244-Alpha-unstrip.so
+new file mode 100755
+index 0000000..f8cdc7c
+Binary files /dev/null and b/external/dzvoip/libs/libduilite-rk3308_32-1.25.99-268435520-20200803171244-Alpha-unstrip.so differ
+diff --git a/external/dzvoip/libs/libupload_rk3308_32.so b/external/dzvoip/libs/libupload_rk3308_32.so
+new file mode 100755
+index 0000000..b21545d
+Binary files /dev/null and b/external/dzvoip/libs/libupload_rk3308_32.so differ
+diff --git a/external/dzvoip/res/fesp/AEC_ch6-2-ch4_2ref_emd_20200508_v2.50.0.10.bin b/external/dzvoip/res/fesp/AEC_ch6-2-ch4_2ref_emd_20200508_v2.50.0.10.bin
+new file mode 100755
+index 0000000..47cdabf
+Binary files /dev/null and b/external/dzvoip/res/fesp/AEC_ch6-2-ch4_2ref_emd_20200508_v2.50.0.10.bin differ
+diff --git a/external/dzvoip/res/fesp/AEC_ch8-2-ch4_2ref_emd_20200811_v2.50.0.10.bin b/external/dzvoip/res/fesp/AEC_ch8-2-ch4_2ref_emd_20200811_v2.50.0.10.bin
+new file mode 100755
+index 0000000..4d9d540
+Binary files /dev/null and b/external/dzvoip/res/fesp/AEC_ch8-2-ch4_2ref_emd_20200811_v2.50.0.10.bin differ
+diff --git a/external/dzvoip/res/fesp/UCA_asr_ch4-2-ch4_70mm_20200616_v2.0.0.40_wkpMTModeOff.bin b/external/dzvoip/res/fesp/UCA_asr_ch4-2-ch4_70mm_20200616_v2.0.0.40_wkpMTModeOff.bin
+new file mode 100755
+index 0000000..5230fbe
+Binary files /dev/null and b/external/dzvoip/res/fesp/UCA_asr_ch4-2-ch4_70mm_20200616_v2.0.0.40_wkpMTModeOff.bin differ
+diff --git a/external/dzvoip/res/fesp/sspe_uca70mm_4chgsc_ref7_nr_agc_20200811.bin b/external/dzvoip/res/fesp/sspe_uca70mm_4chgsc_ref7_nr_agc_20200811.bin
+new file mode 100755
+index 0000000..1895fcb
+Binary files /dev/null and b/external/dzvoip/res/fesp/sspe_uca70mm_4chgsc_ref7_nr_agc_20200811.bin differ
+diff --git a/external/dzvoip/res/fesp/sspe_uca70mm_4chgsc_ref8_nr_agc_20200811.bin b/external/dzvoip/res/fesp/sspe_uca70mm_4chgsc_ref8_nr_agc_20200811.bin
+new file mode 100755
+index 0000000..52a2f51
+Binary files /dev/null and b/external/dzvoip/res/fesp/sspe_uca70mm_4chgsc_ref8_nr_agc_20200811.bin differ
+diff --git a/external/dzvoip/res/fesp/vad_aihome_v0.12c.bin b/external/dzvoip/res/fesp/vad_aihome_v0.12c.bin
+new file mode 100755
+index 0000000..df464fa
+Binary files /dev/null and b/external/dzvoip/res/fesp/vad_aihome_v0.12c.bin differ
+diff --git a/external/dzvoip/res/fesp/wakeup_aifar_comm_20180104.bin b/external/dzvoip/res/fesp/wakeup_aifar_comm_20180104.bin
+new file mode 100755
+index 0000000..758cf9c
+Binary files /dev/null and b/external/dzvoip/res/fesp/wakeup_aifar_comm_20180104.bin differ
+diff --git a/external/dzvoip/src/dz_voip.c b/external/dzvoip/src/dz_voip.c
+new file mode 100755
+index 0000000..537b09f
+--- /dev/null
++++ b/external/dzvoip/src/dz_voip.c
+@@ -0,0 +1,700 @@
++/*************************************************************************** 
++  > File Name: dz_voip.c 
++  > Des      : 语音通话线程，包括语音发送线程、语音接收线程
++  >            同时包括语音采样率、通道、位深等音频参数
++  > Author   : Rick
++  > Date     : 2020/07/10
++****************************************************************************/
++
++#include <stdio.h>
++#include <stdlib.h>
++#include <string.h>
++#include <unistd.h>
++#include <sys/types.h>
++#include <sys/un.h>
++#include <sys/syscall.h>
++#include <sys/select.h>
++#include <errno.h>
++#include <pthread.h>
++#include <assert.h>
++#include "../include/duilite.h"
++#include "dz_voip.h"
++
++//AEC
++char *auth_cfg = "{\"auth_dev_addr\": 2}";  // I2C addr
++struct duilite_fespa *fespa;
++
++//net
++int client_fd = 0;
++unsigned char *send_buf=NULL;
++unsigned char *spk_playback_buf=NULL;
++//audio
++PcmHandle pcm_6mic_capture_handle,pcm_xiangyin_playback_handle, pcm_spk_playback_handle,pcm_xiangyin_capture_handle;
++FILE* output_bf_audio = NULL;
++pthread_mutex_t mutex_audio,mutex_audio_aec;
++
++
++//speech
++int  wakeup_callback(void *user_data, int type, char *msg, int len);
++int  doa_callback(void *user_data, int type, char *msg, int len);
++int  beamforming_callback(void *user_data, int type, char *msg, int len);
++int  duilite_init(void);
++void duilite_exit(void);
++void duilite_feed(struct duilite_fespa *fespa, char *data, int len);
++
++pid_t gettid() { return syscall(SYS_gettid);}
++
++
++snd_pcm_uframes_t set_6mic_catpure_params(snd_pcm_t **handle)
++{
++	int rc;
++	int dir=0;
++	snd_pcm_stream_t stream;
++	snd_pcm_format_t format    = DEFAULT_FORMAT;
++	snd_pcm_uframes_t frames = DEF_FRAMES;
++	unsigned int channels = DEF_6MIC_CAPTURE_CHANALS;
++	int rate = DEF_6MIC_CAPTURE_RATE;
++	snd_pcm_t* phandle;
++	snd_pcm_hw_params_t* params;
++		stream   = SND_PCM_STREAM_CAPTURE;
++		rc=snd_pcm_open(&phandle, "mult_4_2", stream, 0);
++		if(rc<0)
++		{
++	  		perror("\nopen PCM device failed:");
++	  		exit(1);
++		}
++	/* Allocate a hardware parameters object. */
++		printf("6mic------>stream:%d,SND_PCM_STREAM_CAPTURE......\n",stream);
++	
++	snd_pcm_hw_params_alloca(&params);
++	if(rc<0)
++	{
++	  perror("\nsnd_pcm_hw_params_alloca:");
++	  exit(1);
++	}
++	/* Fill it in with default values. */
++	rc=snd_pcm_hw_params_any(phandle, params);
++	if(rc<0)
++	{
++	  perror("\nsnd_pcm_hw_params_any:");
++	  exit(1);
++	}
++	/* Interleaved mode */
++	rc=snd_pcm_hw_params_set_access(phandle, params, SND_PCM_ACCESS_RW_INTERLEAVED);
++	if(rc<0)
++	{
++	  perror("\nsed_pcm_hw_set_access:");
++	  exit(1);
++
++	}
++	/* Signed 16-bit little-endian format */
++	snd_pcm_hw_params_set_format(phandle, params, format);
++
++	/* Two channels (stereo) */
++	rc=snd_pcm_hw_params_set_channels(phandle, params, channels);
++	if(rc<0)
++	{
++	  perror("\nsnd_pcm_hw_params_set_channels:");
++	  exit(1);
++	}
++	/* 44100 bits/second sampling rate (CD quality) */
++	rc=snd_pcm_hw_params_set_rate_near(phandle, params, &rate, &dir); 
++	if(rc<0)
++	{
++	  perror("\nsnd_pcm_hw_params_set_rate_near:");
++	  exit(1);
++	}
++	/* Set period size to 32 frames. */
++	//snd_pcm_hw_params_set_period_size_near(phandle,params, &frames, &dir);
++	/* Write the parameters to the driver */
++	rc = snd_pcm_hw_params(phandle, params);
++	if(rc<0)
++	{
++		perror("\nsnd_pcm_hw_params: ");
++		exit(1);
++	}
++	
++	/* Use a buffer large enough to hold one period */
++	rc=snd_pcm_hw_params_get_period_size(params, &frames, &dir);
++	if(rc<0)
++	{
++	  perror("\nsnd_pcm_hw_params_get_period_size\n");
++	  exit(1);
++	}
++	
++	//把句柄传出去
++	*handle = phandle;
++
++	printf("--------[ Hardware Parameters Info. ]----------\n");
++	printf("stream:%d\n",(int)stream);
++	printf("frames:%d\n",(int)frames);
++	printf("format:%d\n",(int)format);
++	printf("chanel:%d\n",(int)channels);
++	printf("rate  :%d\n",(int)rate);
++	printf("-----------------------------------------------\n");
++
++	return frames;
++
++}
++
++snd_pcm_uframes_t  set_spk_playback_params(snd_pcm_t **handle,snd_pcm_uframes_t frames)
++{
++	int rc;
++	int dir=0;
++	snd_pcm_stream_t stream;
++	snd_pcm_format_t format    = DEFAULT_FORMAT;
++	//snd_pcm_uframes_t frames = DEF_FRAMES;
++	unsigned int channels = DEF_SPK_PLAYBACK_CHANALS;
++	int rate = DEF_SPK_PLAYBACK_RATE;
++	snd_pcm_t* phandle;
++	snd_pcm_hw_params_t* params;
++
++		stream = SND_PCM_STREAM_PLAYBACK;
++		rc=snd_pcm_open(&phandle, "hw:7,0", stream, 0);
++		if(rc<0)
++		{
++	  		perror("\nopen PCM device failed:");
++	  		exit(1);
++		}
++		printf("speaker------>stream:%d,SND_PCM_STREAM_PLAYBACK......\n",stream);
++	
++	snd_pcm_hw_params_alloca(&params);
++	if(rc<0)
++	{
++	  perror("\nsnd_pcm_hw_params_alloca:");
++	  exit(1);
++	}
++	/* Fill it in with default values. */
++	rc=snd_pcm_hw_params_any(phandle, params);
++	if(rc<0)
++	{
++	  perror("\nsnd_pcm_hw_params_any:");
++	  exit(1);
++	}
++	/* Interleaved mode */
++	rc=snd_pcm_hw_params_set_access(phandle, params, SND_PCM_ACCESS_RW_INTERLEAVED);
++	if(rc<0)
++	{
++	  perror("\nsed_pcm_hw_set_access:");
++	  exit(1);
++
++	}
++	/* Signed 16-bit little-endian format */
++	snd_pcm_hw_params_set_format(phandle, params, format);
++
++	/* Two channels (stereo) */
++	rc=snd_pcm_hw_params_set_channels(phandle, params, channels);
++	if(rc<0)
++	{
++	  perror("\nsnd_pcm_hw_params_set_channels:");
++	  exit(1);
++	}
++	/* 44100 bits/second sampling rate (CD quality) */
++	rc=snd_pcm_hw_params_set_rate_near(phandle, params, &rate, &dir); 
++	if(rc<0)
++	{
++	  perror("\nsnd_pcm_hw_params_set_rate_near:");
++	  exit(1);
++	}
++	/* Set period size to 32 frames. */
++	snd_pcm_hw_params_set_period_size_near(phandle,params, &frames, &dir);
++	/* Write the parameters to the driver */
++	rc = snd_pcm_hw_params(phandle, params);
++	if(rc<0)
++	{
++		perror("\nsnd_pcm_hw_params: ");
++		exit(1);
++	}
++	
++	/* Use a buffer large enough to hold one period */
++	rc=snd_pcm_hw_params_get_period_size(params, &frames, &dir);
++	if(rc<0)
++	{
++	  perror("\nsnd_pcm_hw_params_get_period_size\n");
++	  exit(1);
++	}
++	
++	//把句柄传出去
++	*handle = phandle;
++
++	printf("--------[ Hardware Parameters Info. ]----------\n");
++	printf("stream:%d\n",(int)stream);
++	printf("frames:%d\n",(int)frames);
++	printf("format:%d\n",(int)format);
++	printf("chanel:%d\n",(int)channels);
++	printf("rate  :%d\n",(int)rate);
++	printf("-----------------------------------------------\n");
++
++	return frames;
++}
++
++snd_pcm_uframes_t  set_xiangyin_capture_params(snd_pcm_t **handle)
++{
++	int rc;
++	int dir=0;
++	snd_pcm_stream_t stream;
++	snd_pcm_format_t format    = DEFAULT_FORMAT;
++	snd_pcm_uframes_t frames = DEF_XY_CAPTURE_FRAMES;
++	unsigned int channels = DEF_XY_CAPTURE_CHANALS;
++	int rate = DEF_XY_CAPTURE_RATE;
++	snd_pcm_t* phandle;
++	snd_pcm_hw_params_t* params;
++
++		stream = SND_PCM_STREAM_CAPTURE;
++		rc=snd_pcm_open(&phandle, "hw:1,0", stream, 0);
++		if(rc<0)
++		{
++	  		perror("\nopen PCM device failed:");
++	  		exit(1);
++		}
++		printf("xiangyin------>stream:%d,SND_PCM_STREAM_CAPTURE......\n",stream);
++	
++	snd_pcm_hw_params_alloca(&params);
++	if(rc<0)
++	{
++	  perror("\nsnd_pcm_hw_params_alloca:");
++	  exit(1);
++	}
++	/* Fill it in with default values. */
++	rc=snd_pcm_hw_params_any(phandle, params);
++	if(rc<0)
++	{
++	  perror("\nsnd_pcm_hw_params_any:");
++	  exit(1);
++	}
++	/* Interleaved mode */
++	rc=snd_pcm_hw_params_set_access(phandle, params, SND_PCM_ACCESS_RW_INTERLEAVED);
++	if(rc<0)
++	{
++	  perror("\nsed_pcm_hw_set_access:");
++	  exit(1);
++
++	}
++	/* Signed 16-bit little-endian format */
++	snd_pcm_hw_params_set_format(phandle, params, format);
++
++	/* Two channels (stereo) */
++	rc=snd_pcm_hw_params_set_channels(phandle, params, channels);
++	if(rc<0)
++	{
++	  perror("\nsnd_pcm_hw_params_set_channels:");
++	  exit(1);
++	}
++	/* 44100 bits/second sampling rate (CD quality) */
++	rc=snd_pcm_hw_params_set_rate_near(phandle, params, &rate, &dir); 
++	if(rc<0)
++	{
++	  perror("\nsnd_pcm_hw_params_set_rate_near:");
++	  exit(1);
++	}
++	/* Set period size to 32 frames. */
++	snd_pcm_hw_params_set_period_size_near(phandle,params, &frames, &dir);
++	/* Write the parameters to the driver */
++	rc = snd_pcm_hw_params(phandle, params);
++	if(rc<0)
++	{
++		perror("\nsnd_pcm_hw_params: ");
++		exit(1);
++	}
++	
++	/* Use a buffer large enough to hold one period */
++	rc=snd_pcm_hw_params_get_period_size(params, &frames, &dir);
++	if(rc<0)
++	{
++	  perror("\nsnd_pcm_hw_params_get_period_size\n");
++	  exit(1);
++	}
++	
++	//把句柄传出去
++	*handle = phandle;
++
++	printf("--------[ Hardware Parameters Info. ]----------\n");
++	printf("stream:%d\n",(int)stream);
++	printf("frames:%d\n",(int)frames);
++	printf("format:%d\n",(int)format);
++	printf("chanel:%d\n",(int)channels);
++	printf("rate  :%d\n",(int)rate);
++	printf("-----------------------------------------------\n");
++
++	return frames;
++}
++
++snd_pcm_uframes_t  set_xiangyin_playback_params(snd_pcm_t **handle)
++{
++	int rc;
++	int dir=0;
++	snd_pcm_stream_t stream;
++	snd_pcm_format_t format    = DEFAULT_FORMAT;
++	snd_pcm_uframes_t frames = DEF_XY_PLAYBACK_FRAMES;
++	unsigned int channels = DEF_XY_PLAYBACK_CHANALS;
++	int rate = DEF_XY_PLAYBACK_RATE;
++	snd_pcm_t* phandle;
++	snd_pcm_hw_params_t* params;
++
++		stream = SND_PCM_STREAM_PLAYBACK;
++		rc=snd_pcm_open(&phandle, "hw:1,0", stream, 0);
++		if(rc<0)
++		{
++	  		perror("\nopen PCM device failed:");
++	  		exit(1);
++		}
++		printf("xiangyin------>stream:%d,SND_PCM_STREAM_PLAYBACK......\n",stream);
++	
++	snd_pcm_hw_params_alloca(&params);
++	if(rc<0)
++	{
++	  perror("\nsnd_pcm_hw_params_alloca:");
++	  exit(1);
++	}
++	/* Fill it in with default values. */
++	rc=snd_pcm_hw_params_any(phandle, params);
++	if(rc<0)
++	{
++	  perror("\nsnd_pcm_hw_params_any:");
++	  exit(1);
++	}
++	/* Interleaved mode */
++	rc=snd_pcm_hw_params_set_access(phandle, params, SND_PCM_ACCESS_RW_INTERLEAVED);
++	if(rc<0)
++	{
++	  perror("\nsed_pcm_hw_set_access:");
++	  exit(1);
++
++	}
++	/* Signed 16-bit little-endian format */
++	snd_pcm_hw_params_set_format(phandle, params, format);
++
++	/* Two channels (stereo) */
++	rc=snd_pcm_hw_params_set_channels(phandle, params, channels);
++	if(rc<0)
++	{
++	  perror("\nsnd_pcm_hw_params_set_channels:");
++	  exit(1);
++	}
++	/* 44100 bits/second sampling rate (CD quality) */
++	rc=snd_pcm_hw_params_set_rate_near(phandle, params, &rate, &dir); 
++	if(rc<0)
++	{
++	  perror("\nsnd_pcm_hw_params_set_rate_near:");
++	  exit(1);
++	}
++	/* Set period size to 32 frames. */
++	snd_pcm_hw_params_set_period_size_near(phandle,params, &frames, &dir);
++	/* Write the parameters to the driver */
++	rc = snd_pcm_hw_params(phandle, params);
++	if(rc<0)
++	{
++		perror("\nsnd_pcm_hw_params: ");
++		exit(1);
++	}
++	
++	/* Use a buffer large enough to hold one period */
++	rc=snd_pcm_hw_params_get_period_size(params, &frames, &dir);
++	if(rc<0)
++	{
++	  perror("\nsnd_pcm_hw_params_get_period_size\n");
++	  exit(1);
++	}
++	
++	//把句柄传出去
++	*handle = phandle;
++
++	printf("--------[ Hardware Parameters Info. ]----------\n");
++	printf("stream:%d\n",(int)stream);
++	printf("frames:%d\n",(int)frames);
++	printf("format:%d\n",(int)format);
++	printf("chanel:%d\n",(int)channels);
++	printf("rate  :%d\n",(int)rate);
++	printf("-----------------------------------------------\n");
++
++	return frames;
++}
++
++void *voice_downlink(void *arg)
++{
++    int recv_len = 0;
++	int size;
++	int rc;
++	snd_pcm_t *handlep;
++	snd_pcm_t *xyhandlep;
++
++	unsigned char *xy_catpure_buf=NULL;
++
++	
++
++	snd_pcm_uframes_t xyframes = set_xiangyin_capture_params(&xyhandlep);
++
++	snd_pcm_uframes_t frames = set_spk_playback_params(&handlep,xyframes);
++	 
++	printf("------>voice_downlink\n");
++	printf("Process ID: %d, thread ID %d\n", getpid(), gettid());
++	
++	// size = frames * DEF_SPK_PLAYBACK_CHANALS * 2; /* 2 bytes/sample, 2 channels */
++	// spk_playback_buf = (char *)malloc(size);
++	// memset(spk_playback_buf, 0, size);
++	//printf("speaker playback size:%d frames:%d\n",size,frames);
++	int size_xy = xyframes* DEF_SPK_PLAYBACK_CHANALS * 2;
++	xy_catpure_buf = (char *)malloc(size_xy);
++	memset(xy_catpure_buf, 0, size_xy);	
++	printf("xiangying capture size:%d frames:%d\n",size_xy,xyframes);
++    
++	while(1) {
++		int rc1 = snd_pcm_readi(xyhandlep, xy_catpure_buf, xyframes); //256->frame frame=2*2 bytes
++	    //printf("read rc:%d\n",rc1);
++		if(rc1>0)
++		{
++			int rc2 = snd_pcm_writei(handlep, xy_catpure_buf, rc1); //256->frame frame=2*2 bytes
++			//printf("write rc:%d\n",rc2);
++			if (rc2 == -EPIPE) {
++			// 	// EPIPE means overrun 
++			 	//fprintf(stderr, "underrun rc2:%d\n",rc2);
++			snd_pcm_prepare(handlep);
++			 	snd_pcm_writei(handlep, xy_catpure_buf, rc1);
++			}
++		}
++		memset(xy_catpure_buf, 0, size_xy);
++    }
++	snd_pcm_drain(handlep);
++	snd_pcm_close(handlep);
++	snd_pcm_drain(xyhandlep);
++	snd_pcm_close(xyhandlep);
++	//free(spk_playback_buf);
++	free(xy_catpure_buf);
++    
++    return  NULL;
++}
++
++char *buf_48k2ch = NULL;
++int bufLen_48k2ch = 512*6;
++FILE* f_48k2ch_dump;
++
++void *voice_uplink(void *arg)
++{
++    int send_len = 0;
++	int size;
++	int rc;
++	char *rawbuf6Mic = NULL;
++	
++	snd_pcm_t *handlec;
++
++	snd_pcm_t *xyhandlep;
++
++	FILE* fr;
++	
++
++	printf("------>voice_uplink\n");
++	printf("Process ID: %d, thread ID %d\n", getpid(), gettid());
++
++	buf_48k2ch = (char *)malloc(bufLen_48k2ch);
++	memset(buf_48k2ch, 0,bufLen_48k2ch);
++
++	snd_pcm_uframes_t xyframes = set_xiangyin_playback_params(&xyhandlep);
++	printf("xiangyin playback:frames:%d...\n",xyframes);
++	pcm_xiangyin_playback_handle.handle = xyhandlep;
++	strcpy(pcm_xiangyin_playback_handle.name, "xy_playback");
++
++	snd_pcm_uframes_t frames = set_6mic_catpure_params(&handlec);
++	pcm_6mic_capture_handle.handle = handlec;
++	strcpy(pcm_6mic_capture_handle.name, "pcm_capture");
++	
++	size = frames * DEF_6MIC_CAPTURE_CHANALS * 2; /* 2 bytes/sample, 2 channels */
++	rawbuf6Mic = (char *)malloc(size);
++	memset(rawbuf6Mic, 0, size);
++
++	printf("6mic caputre:size:%d frames:%d...\n",size,frames);
++
++#if DEBUG_TEST
++	fr = fopen("6mic.raw", "a+");
++	if (fr ==NULL) {
++		printf("open 6mic.raw failed\n");
++	}
++	f_48k2ch_dump = fopen("48k2ch.raw", "a+");
++	if (f_48k2ch_dump ==NULL) {
++		printf("open 48k2ch.raw failed\n");
++	}
++#endif
++	duilite_init();
++
++	
++    
++    while (1)
++    {
++		
++	    rc = snd_pcm_readi(pcm_6mic_capture_handle.handle, rawbuf6Mic, frames);
++        if (rc == -EPIPE) {
++            /* EPIPE means overrun */
++            fprintf(stderr, "overrun occurred\n");
++			snd_pcm_prepare(pcm_6mic_capture_handle.handle);
++        } else if (rc < 0) {
++            fprintf(stderr, "error from read: %s\n", snd_strerror(rc));
++        } else if (rc != (int)frames) {
++            fprintf(stderr, "short read, read %d frames\n", rc);
++        }
++		
++
++		//dump raw data
++#if DEBUG_TEST
++		fwrite(rawbuf6Mic, 1, size, fr);
++#endif	
++		//======================================
++		duilite_feed(fespa, rawbuf6Mic, size);
++		//======================================
++		//printf("-------->duilite_feed\n");		
++		memset(rawbuf6Mic, 0, size);
++		
++    }
++
++
++//==============================================
++	duilite_exit();
++//============================================		
++	snd_pcm_drain(pcm_6mic_capture_handle.handle);
++	snd_pcm_close(pcm_6mic_capture_handle.handle);
++
++	snd_pcm_drain(pcm_xiangyin_playback_handle.handle);
++	snd_pcm_close(pcm_xiangyin_playback_handle.handle);
++
++	free(rawbuf6Mic);
++
++#if DEBUG_TEST
++	fclose(fr);
++#endif
++
++    return  NULL;
++}
++
++int wakeup_callback(void *user_data, int type, char *msg, int len) 
++{
++    printf("%.*s\n", len, msg);
++    return 0;
++}
++
++int doa_callback(void *user_data, int type, char *msg, int len) 
++{
++    printf("%.*s\n", len, msg);
++    return 0;
++}
++
++
++void pcm_16k1chto48k2ch(const char *input, int len, char *output)
++{
++	for(int i = 0; i < len; i+=2) { 
++		memcpy(output + i*6+0, input+i, 2);
++		memcpy(output + i*6+2, input+i, 2);
++		memcpy(output + i*6+4, input+i, 2);
++		memcpy(output + i*6+6, input+i, 2);
++		memcpy(output + i*6+8, input+i, 2);
++		memcpy(output + i*6+10, input+i, 2);
++	}
++}
++
++
++int beamforming_callback(void *user_data, int type, char *msg, int len) 
++{
++	//FILE* output = (FILE*)user_data;
++	
++	if (type == DUILITE_MSG_TYPE_JSON) {
++		printf("-------->,DUILITE_MSG_TYPE_JSON%.*s", len, msg);
++	} else if (type == DUILITE_MSG_TYPE_BINARY) {
++		//printf("-------->DUILITE_MSG_TYPE_BINARY,%d\n", len);
++		if(len > 0) {
++			//printf("-------->memcpy\n");
++			//send_audio(msg,len);//send out
++#if DEBUG_TEST
++		    fwrite(msg, 1, len, output_bf_audio);
++#endif
++			
++			if(512==len)
++			{
++				
++				memset(buf_48k2ch, 0,bufLen_48k2ch);
++				pcm_16k1chto48k2ch(msg,len,buf_48k2ch);
++#if DEBUG_TEST
++				fwrite(buf_48k2ch, 1, bufLen_48k2ch, f_48k2ch_dump);
++#endif
++				int rc2 = snd_pcm_writei(pcm_xiangyin_playback_handle.handle, buf_48k2ch, DEF_XY_PLAYBACK_FRAMES); 
++				//printf("write rc:%d\n",rc2);
++				if (rc2 == -EPIPE) {
++			// 	// EPIPE means overrun 
++					//fprintf(stderr, "write xiangying underrun rc2:%d\n",rc2);
++					snd_pcm_prepare(pcm_xiangyin_playback_handle.handle);
++					snd_pcm_writei(pcm_xiangyin_playback_handle.handle, buf_48k2ch, DEF_XY_PLAYBACK_FRAMES);
++				}
++
++			}
++			else
++			{
++				printf("-------->aispeech callback data warning,len=%d\n",len);
++			}
++
++		}
++	}
++    return 0;
++}
++
++int duilite_init(void)
++{
++	char *cfg = 
++            "{ \
++                \"aecBinPath\":\"/oem/dz_voice/res/fesp/AEC_ch6-2-ch4_2ref_emd_20200508_v2.50.0.10.bin\",    \
++                \"wakeupBinPath\":\"/oem/dz_voice/res/fesp/wakeup_aifar_comm_20180104.bin\", \
++                \"beamformingBinPath\":\"/oem/dz_voice/res/fesp/UCA_asr_ch4-2-ch4_70mm_20200616_v2.0.0.40_wkpMTModeOff.bin\",    \
++                \"env\":\"words=ni hao xiao le;thresh=0.13\",  \
++                \"rollBack\":1200     \
++            }";
++    int r = duilite_library_load(auth_cfg);//加载库函数，完成初始化与授权，接口阻塞，调用一次即可
++    printf("duilite_library_load :%d\n", r);
++    
++    fespa = duilite_fespa_new(cfg);//初始化fespa引擎，并在后台开启wakeup，echo和beamforming等计算线程
++    assert(fespa != NULL);
++
++    duilite_fespa_register(fespa, DUILITE_CALLBACK_FESPA_WAKEUP, wakeup_callback, NULL);
++    duilite_fespa_register(fespa, DUILITE_CALLBACK_FESPA_DOA, doa_callback, NULL);
++    duilite_fespa_register(fespa, DUILITE_CALLBACK_FESPA_BEAMFORMING, beamforming_callback, NULL);
++#if DEBUG_TEST
++	output_bf_audio = fopen("aispeechdump.raw", "a+");
++	if (output_bf_audio ==NULL) {
++		printf("open srv_send.raw failed\n");
++	}
++#endif
++}
++
++void duilite_exit(void)
++{
++	duilite_fespa_delete(fespa);//销毁fespa引擎
++    duilite_library_release();//释放库资源
++#if DEBUG_TEST
++    fclose(output_bf_audio);
++	fclose(f_48k2ch_dump);
++#endif
++	free(buf_48k2ch);
++	
++}
++
++void duilite_feed(struct duilite_fespa *fespa, char *data, int len)
++{			 
++	duilite_fespa_feed(fespa, data, len);//输入音频数据,格式为16k采样率，有符号16bit编码
++	//usleep(32000);
++}
++
++int main(int argc, char *argv[])
++{
++	int server_status = 0;
++	while(1) {
++		if(server_status == 0) {
++		pthread_t thread_uplink,thread_downlink;
++			
++		pthread_create(&thread_uplink, NULL, &voice_uplink, NULL);
++		pthread_detach(thread_uplink);
++		pthread_create(&thread_downlink, NULL, &voice_downlink, NULL);
++		pthread_detach(thread_downlink);
++		printf("audio handle has estabished!\n");	
++
++		server_status = 1;
++		}
++		usleep(320000);
++	}
++	
++	return 0;
++}
++
+diff --git a/external/dzvoip/src/dz_voip.h b/external/dzvoip/src/dz_voip.h
+new file mode 100755
+index 0000000..776d4d1
+--- /dev/null
++++ b/external/dzvoip/src/dz_voip.h
+@@ -0,0 +1,51 @@
++/*************************************************************************** 
++  > File Name: dz_voip.h
++  > Des      : none
++  > Author   : Rick
++  > Date     : 2020/07/10
++****************************************************************************/
++#ifndef __DZ_VOIP__
++#define __DZ_VOIP__
++#include <sys/timeb.h>
++#include <alsa/asoundlib.h>
++
++#define ALSA_PCM_NEW_HW_PARAMS_API
++
++#define TCP_SEND_PORT		10121
++#define TCP_RECV_PORT		10122
++#define DEFAULT_RATE 	16000
++#define DEFAULT_PORT	8000
++
++
++#define DEFAULT_FORMAT	SND_PCM_FORMAT_S16_LE
++#define DEF_FRAMES 32
++
++#define DEF_SPK_PLAYBACK_CHANALS 2
++#define DEF_SPK_PLAYBACK_RATE 	48000
++
++#define DEF_6MIC_CAPTURE_CHANALS 	6
++#define DEF_6MIC_CAPTURE_RATE 	16000
++
++#define DEF_XY_CAPTURE_CHANALS 	2   //xiang yin
++#define DEF_XY_CAPTURE_RATE 	48000
++#define DEF_XY_CAPTURE_FRAMES 256
++
++#define DEF_XY_PLAYBACK_CHANALS 	2   //xiang yin
++#define DEF_XY_PLAYBACK_RATE 	48000
++#define DEF_XY_PLAYBACK_FRAMES 256*3
++
++enum {
++	PLAYBACK = 0,
++	CAPTURE
++};
++
++typedef struct {
++	char name[20];
++	snd_pcm_t *handle;
++} PcmHandle;
++
++extern pthread_mutex_t mutex_audio,mutex_audio_aec;
++
++void *voice_uplink(void *arg);
++void *voice_downlink(void *arg);
++#endif
